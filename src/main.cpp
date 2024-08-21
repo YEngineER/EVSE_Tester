@@ -20,7 +20,8 @@ String req = "";
 
 uint8_t AVR_count = 0;
 uint8_t state_count = 0;
-BluetoothSerial DEBUG;
+BluetoothSerial DEBUG_Bluetooth;
+SoftwareSerial AVR(RX1,TX1);
 
 void Direction(void) {
   pinMode(SW,       INPUT_PULLUP);
@@ -51,8 +52,8 @@ void Direction(void) {
 void setup() {
   Direction();
   // DEBUG.begin(115200);
-  DEBUG.begin("EVSE Tester");
-  AVR.begin(9600, SERIAL_8N1, RX1, TX1);
+  DEBUG_Bluetooth.begin("EVSE Tester");
+  AVR.begin(9600);
   METER_.begin(9600);
   String data = requestPackageFromAVR('A');
 }

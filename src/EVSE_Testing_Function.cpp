@@ -59,8 +59,8 @@ void state_A_to_B (void) {
     if(float(state["PWM_Amplitude"])    < 8.37  || float(state["PWM_Amplitude"])    > 9.59)  {state["PWM_Amplitude_Result"] = false;}
     if(float(state["PWM_NveAmplitude"]) < -12.6 || float(state["PWM_NveAmplitude"]) > -11.0) {state["PWM_NveAmplitude_Result"] = false;}
     state_count = 1;
-    serializeJson(state, DEBUG);
-    DEBUG.println();
+    serializeJson(state, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -92,8 +92,8 @@ void state_B_to_C (void) {
 
     if(OnRelay_Check()){
       state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG);
-      DEBUG.println();
+      serializeJson(state, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
     nowTime = micros();
@@ -105,8 +105,8 @@ void state_B_to_C (void) {
       }
       if((micros() - nowTime) > 5000000) {
         state["MainsOnDelay_Result"]  = false;
-        serializeJson(state, DEBUG);
-        DEBUG.println();
+        serializeJson(state, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
@@ -154,8 +154,8 @@ void state_B_to_C (void) {
     if(float(state["Voltage"]) < 210 || float(state["Voltage"]) > 240)                       {state["Voltage_Result"]         = false;}
     if(float(state["MainsFreq"]) < 49 || float(state["MainsFreq"]) > 51)                     {state["MainsFreq_Result"]       = false;}
     state_count = 2;
-    serializeJson(state, DEBUG);
-    DEBUG.println();
+    serializeJson(state, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -187,8 +187,8 @@ void state_B_to_D (void) {
 
     if(OffRelay_Check()){
       state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG);
-      DEBUG.println();
+      serializeJson(state, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
 
@@ -238,8 +238,8 @@ void state_B_to_D (void) {
     if(float(state["Voltage"]) < 210 || float(state["Voltage"]) > 240)                       {state["Voltage_Result"]         = false;}
     if(float(state["MainsFreq"]) < 49 || float(state["MainsFreq"]) > 51)                     {state["MainsFreq_Result"]       = false;}
     state_count = 3;
-    serializeJson(state, DEBUG);
-    DEBUG.println();
+    serializeJson(state, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -272,8 +272,8 @@ void state_C_to_B (void) {
 
     if(OffRelay_Check()){
       state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG);
-      DEBUG.println();
+      serializeJson(state, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
 
@@ -289,8 +289,8 @@ void state_C_to_B (void) {
       }
       if((micros() - nowTime) > 5000000) {
         state["MainsOffDelay_Result"] = false;
-        serializeJson(state, DEBUG);
-        DEBUG.println();
+        serializeJson(state, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
@@ -317,8 +317,8 @@ void state_C_to_B (void) {
     if(float(state["PWM_NveAmplitude"]) < -12.6 || float(state["PWM_NveAmplitude"]) > -11.0) {state["PWM_NveAmplitude_Result"] = false;}
     if(float(state["MainsOffDelay"]) > 100)                                                  {state["MainsOffDelay_Result"] = false;}
     state_count = 0;
-    serializeJson(state, DEBUG);
-    DEBUG.println();
+    serializeJson(state, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -346,8 +346,8 @@ void diode_PE_test (void) {
       diode["Diode_ShortCircuit_Result"] = false;
       diode["PE_OpenCircuit_Result"]     = false;
       diode["Diode_OpenCircuit_Result"]  = false;
-      serializeJson(diode, DEBUG);
-      DEBUG.println();
+      serializeJson(diode, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
     nowTime = micros();
@@ -365,8 +365,8 @@ void diode_PE_test (void) {
         diode["PE_OpenCircuit_Result"]     = false;
         diode["Diode_OpenCircuit_Result"]  = false;
         
-        serializeJson(diode, DEBUG);
-        DEBUG.println();
+        serializeJson(diode, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
@@ -377,8 +377,8 @@ void diode_PE_test (void) {
     if(OffRelay_Check()){
       diode["PE_OpenCircuit_Result"]     = false;
       diode["Diode_OpenCircuit_Result"]  = false;
-      serializeJson(diode, DEBUG);
-      DEBUG.println();
+      serializeJson(diode, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
     nowTime = micros();
@@ -394,8 +394,8 @@ void diode_PE_test (void) {
       if((micros() - nowTime) > 5000000) {
         diode["PE_OpenCircuit_Result"]     = false;
         diode["Diode_OpenCircuit_Result"]  = false;
-        serializeJson(diode, DEBUG);
-        DEBUG.println();
+        serializeJson(diode, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
@@ -405,8 +405,8 @@ void diode_PE_test (void) {
     digitalWrite(RE_C, HIGH); delay(1000);
     if(OffRelay_Check()){
       diode["Diode_OpenCircuit_Result"] = false;
-      serializeJson(diode, DEBUG);
-      DEBUG.println();
+      serializeJson(diode, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
     nowTime = micros();
@@ -421,14 +421,14 @@ void diode_PE_test (void) {
       }
       if((micros() - nowTime) > 5000000) {
         diode["Diode_OpenCircuit_Result"] = false;
-        serializeJson(diode, DEBUG);
-        DEBUG.println();
+        serializeJson(diode, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
     digitalWrite(RE_C, LOW); delay(1000);
-    serializeJson(diode, DEBUG);
-    DEBUG.println();
+    serializeJson(diode, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -453,8 +453,8 @@ void RCD0_Test (void) {
     digitalWrite(RE_C, HIGH); delay(1000);
     if(OffRelay_Check()){
       rcd["RCD0_Result"] = false;
-      serializeJson(rcd, DEBUG);
-      DEBUG.println();
+      serializeJson(rcd, DEBUG_Bluetooth);
+      DEBUG_Bluetooth.println();
       ESP.restart();
     }
     digitalWrite(RE_LEAK, HIGH);
@@ -469,16 +469,16 @@ void RCD0_Test (void) {
       }
       if((micros() - nowTime) > 300000) {
         rcd["RCD0_Result"] = false;
-        serializeJson(rcd, DEBUG);
-        DEBUG.println();
+        serializeJson(rcd, DEBUG_Bluetooth);
+        DEBUG_Bluetooth.println();
         ESP.restart();
       }
     }
     digitalWrite(RE_LEAK, LOW); delay(1000);
     digitalWrite(RE_C,    LOW); delay(1000);
     digitalWrite(RE_B,    LOW); delay(1000);
-    serializeJson(rcd, DEBUG);
-    DEBUG.println();
+    serializeJson(rcd, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -501,7 +501,7 @@ void Insulator_Test (void) {
     delay(3000);
      if(OnRelay_Check()){
       insulation["Insulation_Testing"] = false;
-      serializeJson(insulation, DEBUG);
+      serializeJson(insulation, DEBUG_Bluetooth);
       ESP.restart();
     }
     String data = requestPackageFromAVR('C');
@@ -550,8 +550,8 @@ void Insulator_Test (void) {
     else { insulation["Insulation_Testing"] = false;}
     digitalWrite(RE_N_HV,  LOW);
     digitalWrite(RE_PE_HV, LOW);
-    serializeJson(insulation, DEBUG);
-    DEBUG.println();
+    serializeJson(insulation, DEBUG_Bluetooth);
+    DEBUG_Bluetooth.println();
   }
 }
 
@@ -593,11 +593,11 @@ void state_Manual (void) {
     if(DLT645_init()) {
       delay(3000);
       read_Meter();
-      DEBUG.println(V);
-      DEBUG.println(f);
+      DEBUG_Bluetooth.println(V);
+      DEBUG_Bluetooth.println(f);
     }
     else {
-      DEBUG.println("Meter Fail");
+      DEBUG_Bluetooth.println("Meter Fail");
     }
   }
 }

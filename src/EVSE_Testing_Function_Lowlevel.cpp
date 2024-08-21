@@ -32,8 +32,8 @@ boolean OffRelay_Check (void) {
 }
 
 void State_Control() {
-  if(DEBUG.available()) {
-    req = DEBUG.readStringUntil('\n');
+  if(DEBUG_Bluetooth.available()) {
+    req = DEBUG_Bluetooth.readStringUntil('\n');
   }
   else {req = "";}
 }
