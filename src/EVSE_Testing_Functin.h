@@ -2,8 +2,10 @@
 #define __EVSE_Tester__
 #include <Arduino.h>
 
-boolean OnRelay_Check (void);
-boolean OffRelay_Check (void);
+boolean LineVoltage_OnTime (uint8_t line);
+boolean LineVoltage_OffTime (uint8_t line);
+boolean LineVoltage_OnTime (uint8_t line1,uint8_t line2,uint8_t line3);
+boolean LineVoltage_OffTime (uint8_t line1,uint8_t line2,uint8_t line3);
 String requestPackageFromAVR(char c);
 void State_Control();
 String requestPackageFromAVR(char c);

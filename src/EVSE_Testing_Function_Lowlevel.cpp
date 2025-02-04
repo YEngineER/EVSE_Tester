@@ -6,36 +6,56 @@
 #include <Public_Variable.h>
 #include <DLT645.h>
 
-uint64_t nowTime;
+// uint64_t nowTime;
 
-boolean OnRelay_Check (void) {
-  nowTime = millis();
-  while(millis()-nowTime < 20) {
-    if(!digitalRead(V1)) {
+boolean LineVoltage_OnTime (uint8_t line) {
+  timerStart(timer);
+  timerRestart(timer);
+  while (timerRead(timer) < (20*40000)) {
+    if(!digitalRead(line)){
+      timerStop(timer);
       return true;
     }
   }
+  timerStop(timer);
   return false;
 }
 
-boolean OffRelay_Check (void) {
-  nowTime = millis();
-  while(millis()-nowTime < 20) {
-    if(digitalRead(V1)) {
+boolean LineVoltage_OffTime (uint8_t line) {
+  timerStart(timer);
+  timerRestart(timer);
+  while (timerRead(timer) < (20*40000)) {
+    if(digitalRead(line)){ // when line was detected
       delay(2);
-      if(digitalRead(V1)) {
+      if(digitalRead(line)){ // check again if line still detected
+        timerStop(timer);
         return true;
       }
     }
   }
+  timerStop(timer);
   return false;
+}
+boolean LineVoltage_OnTime (uint8_t line1,uint8_t line2,uint8_t line3){
+  return LineVoltage_OnTime(line1 && line2 && line3);
+}
+boolean LineVoltage_OffTime (uint8_t line1,uint8_t line2,uint8_t line3){
+  return LineVoltage_OffTime(line1 || line2 || line3);
 }
 
 void State_Control() {
   if(DEBUG_Bluetooth.available()) {
     req = DEBUG_Bluetooth.readStringUntil('\n');
+  } else if(Serial.available()) {
+    req = Serial.readStringUntil('\n');
+    for(uint16_t i = 0;i < req.length()+1;i++){
+      Serial.print((uint8_t)req.c_str()[i]);
+      Serial.print(",");
+    }
+    Serial.println();
+  } else {
+    req = "";
   }
-  else {req = "";}
 }
 
 String requestPackageFromAVR(char c){
@@ -80,4 +100,7 @@ void read_Meter(void) {
 	// if(chk == 1) {return 1;}
 	// return 0;
 }
+
+
+
 #endif
