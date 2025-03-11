@@ -7,9 +7,10 @@
 #include <MCP23S08.h>
 #include <SPI.h>
 
-#define TEST_NO_LINE
-#define TEST_NO_METER
+// #define TEST_NO_LINE
+// #define TEST_NO_METER
 #define DEBUG_AVR
+#define DEBUG_Bluetooth_Package
 
 #define RE_S    14          // OUTPUT
 #define RE_B    27          // OUTPUT

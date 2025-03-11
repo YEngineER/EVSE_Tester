@@ -47,6 +47,18 @@ boolean req_PP_amp(PP_Package* output);
 
 boolean req_Ins(Insulation_Package* output);
 
+void req_CP_NonBlocking(void (*whileWaiting)(), void (*onComplete)(CP_Package output), void (*onFail)());
+// msg : ~<PP_amp>~
+// ex:  '+' 0x00 '~' ; No cable
+// ex:  '+' 0x07 '~' ; 13A
+// ex:  '+' 0x08 '~' ; 20A
+// ex:  '+' 0x09 '~' ; 32A
+// ex:  '+' 0x0A '~' ; 63A
+
+void req_PP_amp_NonBlocking(void (*whileWaiting)(), void (*onComplete)(PP_Package output), void (*onFail)());
+
+void req_Ins_NonBlocking(void (*whileWaiting)(), void (*onComplete)(Insulation_Package output), void (*onFail)());
+
 void AVR_Reset_command();
 
 #endif

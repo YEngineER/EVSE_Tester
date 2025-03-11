@@ -7,426 +7,6 @@
 #include <MCP23S08.h>
 #include <AVR128DA48/avr128.h>
 
-void state_A_to_B (void) {
-  if(req == "State_A_to_B") {
-    Serial.println("Begin test State A to B");
-    relay_io->write8(0x00); // Reset all Relay
-
-    DynamicJsonDocument state(512);
-    state["State_To_Test"]     = "A_to_B";
-    state["PWM_StartupDelay"]   = "0";
-    state["PWM_Amplitude"]      = "0";
-    state["PWM_NveAmplitude"]   = "0";
-    state["PWM_Freq"]           = "0";
-    state["PWM_DutyCycle"]      = "0";
-    state["PWM_Imax"]           = "0";
-    state["MainsOnDelay"]       = "0";
-    state["MainsFreq"]          = "0";
-    state["PP"]                 = "0";
-
-    state["PWM_StartupDelay_Result"]   = true;
-    state["PWM_Amplitude_Result"]      = true;
-    state["PWM_NveAmplitude_Result"]   = true;
-    state["PWM_Freq_Result"]           = true;
-    state["PWM_DutyCycle_Result"]      = true;
-    state["PWM_Imax_Result"]           = true;
-    state["MainsOnDelay_Result"]       = true;
-    state["MainsFreq_Result"]          = true;
-    state["PP_Result"]                 = true;
-
-    relay_io->write1(EXP_RE_CP,HIGH);
-    delay(500);
-    uint8_t retry_req = 0;
-    boolean req_cp_ret;
-    CP_Package cp_package;
-    do{
-        req_cp_ret = req_CP(&cp_package);
-        if(!req_cp_ret) {
-          AVR_Reset_command();
-          vTaskDelay(500);
-        }
-    }while((retry_req++ < 3) && (req_cp_ret == false));
-    if(req_cp_ret){
-      state["PWM_DutyCycle"]    = String(cp_package.CP_Duty);
-      state["PWM_Freq"]         = String(cp_package.CP_Freq);
-      state["PWM_Amplitude"]    = String(cp_package.CP_Max);
-      state["PWM_NveAmplitude"] = String(cp_package.CP_Min);
-      
-      if((cp_package.CP_Freq > 1005.0f) || (cp_package.CP_Freq < 995.0f)) {state["PWM_Freq_Result"] = false;}
-      if((cp_package.CP_Max  <   8.37f) || (cp_package.CP_Max  >  9.59f)) {state["PWM_Amplitude_Result"] = false;}
-      if((cp_package.CP_Min  <  -12.6f) || (cp_package.CP_Min  > -11.0f)) {state["PWM_NveAmplitude_Result"] = false;}
-      state_count = 1;
-
-      Serial.printf("CP request complete : attemp %d\n",retry_req);
-    }
-    serializeJson(state, DEBUG_Bluetooth);
-    DEBUG_Bluetooth.println();
-    DEBUG_Bluetooth.flush();
-    Serial.println("Done test State A to B");
-  }
-}
-
-void state_B_to_C (void) {
-  if(req == "State_B_to_C" && state_count == 1) {
-    Serial.println("Begin test State B to C");
-
-    DynamicJsonDocument state(512);
-    state["State_To_Test"]     = "B_to_C";
-    state["PWM_StartupDelay"]   = "0";
-    state["PWM_Amplitude"]      = "0";
-    state["PWM_NveAmplitude"]   = "0";
-    state["PWM_Freq"]           = "0";
-    state["PWM_DutyCycle"]      = "0";
-    state["PWM_Imax"]           = "0";
-    state["MainsOnDelay"]       = "0";
-    state["MainsFreq"]          = "0";
-    state["Voltage"]            = "0";
-    state["PP"]                 = "0";  
-
-    state["PWM_StartupDelay_Result"]   = true;
-    state["PWM_Amplitude_Result"]      = true;
-    state["PWM_NveAmplitude_Result"]   = true;
-    state["PWM_Freq_Result"]           = true;
-    state["PWM_DutyCycle_Result"]      = true;
-    state["PWM_Imax_Result"]           = true;
-    state["MainsOnDelay_Result"]       = true;
-    state["MainsFreq_Result"]          = true;
-    state["Voltage_Result"]            = true;
-    state["PP_Result"]                 = true;
-
-#ifndef TEST_NO_LINE
-    if(LineVoltage_OnTime(V1)){ // when line voltage detected
-      state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG_Bluetooth);
-      DEBUG_Bluetooth.println();
-      ESP.restart();
-    }
-#endif
-
-#ifndef TEST_NO_LINE
-    // nowTime = micros();
-    timerStart(timer);
-    timerRestart(timer);
-    // digitalWrite(RE_C, HIGH);
-#endif
-
-    relay_io->write1(EXP_RE_1k3,HIGH);
-
-#ifndef TEST_NO_LINE
-    while(1) {
-      uint64_t timerNow = timerRead(timer);
-      if(!digitalRead(V1)){
-        state["MainsOnDelay"] = String(timerNow / 40e3);
-        break;
-      }
-      if(timerNow > (5*40000000)) {
-        state["MainsOnDelay_Result"]  = false;
-        serializeJson(state, DEBUG_Bluetooth);
-        DEBUG_Bluetooth.println();
-        ESP.restart();
-      }
-    }
-    timerStop(timer);
-#else
-    state["MainsOnDelay"] = "0";
-    state["MainsOnDelay_Result"] = false;
-#endif
-
-    CP_Package cp_package;
-    PP_Package pp_package;
-    uint8_t retry_req = 0;
-    boolean req_cp_ret;
-    boolean req_pp_ret;
-    do{
-        req_cp_ret = req_CP(&cp_package);
-        if(!req_cp_ret) {
-          AVR_Reset_command();
-          vTaskDelay(500);
-        }
-    }while((retry_req++ < 3) && (req_cp_ret == false));
-
-    vTaskDelay(500);
-    retry_req = 0;
-    do{
-      req_pp_ret = req_PP_amp(&pp_package);
-      if(!req_pp_ret) {
-        AVR_Reset_command();
-        vTaskDelay(500);
-      }
-    }while((retry_req++ < 3) && (req_pp_ret == false));
-
-    if(req_cp_ret){
-      state["PWM_DutyCycle"]    = String(cp_package.CP_Duty);
-      state["PWM_Freq"]         = String(cp_package.CP_Freq);
-      state["PWM_Imax"]         = String(cp_package.CP_Duty * 0.6f);
-      state["PWM_Amplitude"]    = String(cp_package.CP_Max);
-      state["PWM_NveAmplitude"] = String(cp_package.CP_Min);
-
-      Serial.printf("CP request complete : attemp %d\n",retry_req);
-    }else{
-      Serial.printf("CP request Fail : attemp %d\n",retry_req);
-    }
-    
-    if(req_pp_ret){
-      switch(pp_package.PP_rating_enum){
-        case 0:  state["PP"] = "0";
-          break;
-        case 7:  state["PP"] = "13";
-          break;
-        case 8:  state["PP"] = "20";
-          break;
-        case 9:  state["PP"] = "32";
-          break;
-        case 10: state["PP"] = "63";
-          break;
-      }
-
-      Serial.printf("PP request complete : attemp %d\n",retry_req);
-    }else{
-      Serial.printf("PP request Fail : attemp %d\n",retry_req);
-    }
-
-#ifndef TEST_NO_METER
-    for(uint8_t i=0; i<5; i++) {
-      if(DLT645_init()) {
-        delay(3000);
-        read_Meter();
-        state["Voltage"] = String(V);
-        state["MainsFreq"] = String(f);
-        break;
-      }
-    }
-#endif
-
-    if((cp_package.CP_Freq    > 1005.0f ) || (cp_package.CP_Freq    < 995.0f  ))      {state["PWM_Freq_Result"]        = false;}
-    if((cp_package.CP_Max     < 5.47f   ) || (cp_package.CP_Max     > 6.53f   ))      {state["PWM_Amplitude_Result"]   = false;}
-    if((cp_package.CP_Min     < -12.6f  ) || (cp_package.CP_Min     > -11.0f  ))      {state["PWM_NveAmplitude_Result"]= false;}
-    if(float(state["PWM_Imax"]) > float(state["PP"]))                                 {state["PWM_Imax_Result"]        = false;}
-    if(float(state["MainsOnDelay"]) > 3000.0f)                                        {state["MainsOnDelay_Result"]    = false;}
-    if((float(state["Voltage"])   < 210.0f)  || (float(state["Voltage"])   > 240.0f)) {state["Voltage_Result"]         = false;}
-    if((float(state["MainsFreq"]) < 49.0f)   || (float(state["MainsFreq"]) > 51.0f))  {state["MainsFreq_Result"]       = false;}
-    state_count = 2;
-    serializeJson(state, DEBUG_Bluetooth);
-    DEBUG_Bluetooth.println();
-    DEBUG_Bluetooth.flush();
-    Serial.println("Done test State B to C");
-
-    serializeJson(state,Serial);
-    Serial.println();
-  }
-}
-
-void state_B_to_D (void) {
-  if(req == "State_B_to_D" && state_count == 2) {
-    Serial.println("Begin test State B to D");
-    DynamicJsonDocument state(512);
-    state["State_To_Test"]     = "B_to_D";
-    state["PWM_StartupDelay"]   = "0";
-    state["PWM_Amplitude"]      = "0";
-    state["PWM_NveAmplitude"]   = "0";
-    state["PWM_Freq"]           = "0";
-    state["PWM_DutyCycle"]      = "0";
-    state["PWM_Imax"]           = "0";
-    state["MainsOnDelay"]       = "0";
-    state["MainsFreq"]          = "0";
-    state["Voltage"]            = "0";
-    state["PP"]                 = "0";
-
-    state["PWM_StartupDelay_Result"]   = true;
-    state["PWM_Amplitude_Result"]      = true;
-    state["PWM_NveAmplitude_Result"]   = true;
-    state["PWM_Freq_Result"]           = true;
-    state["PWM_DutyCycle_Result"]      = true;
-    state["PWM_Imax_Result"]           = true;
-    state["MainsOnDelay_Result"]       = true;
-    state["MainsFreq_Result"]          = true;
-    state["Voltage_Result"]            = true;
-    state["PP_Result"]                 = true;
-
-#ifndef TEST_NO_LINE
-    if(LineVoltage_OffTime(V1)){
-      state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG_Bluetooth);
-      DEBUG_Bluetooth.println();
-      ESP.restart();
-    }
-#endif
-    relay_io->write1(EXP_RE_330,HIGH);
-    CP_Package cp_package;
-    PP_Package pp_package;
-    uint8_t retry_req = 0;
-    boolean req_cp_ret;
-    boolean req_pp_ret;
-    do{
-        req_cp_ret = req_CP(&cp_package);
-        if(!req_cp_ret) {
-          AVR_Reset_command();
-          vTaskDelay(500);
-        }
-    }while((retry_req++ < 3) && (req_cp_ret == false));
-
-    retry_req = 0;
-    do{
-      req_pp_ret = req_PP_amp(&pp_package);
-      if(!req_pp_ret) {
-        AVR_Reset_command();
-        vTaskDelay(500);
-      }
-    }while((retry_req++ < 3) && (req_pp_ret == false));
-
-    if(req_cp_ret){
-      state["PWM_DutyCycle"]    = String(cp_package.CP_Duty);
-      state["PWM_Freq"]         = String(cp_package.CP_Freq);
-      state["PWM_Imax"]         = String(cp_package.CP_Duty * 0.6f);
-      state["PWM_Amplitude"]    = String(cp_package.CP_Max);
-      state["PWM_NveAmplitude"] = String(cp_package.CP_Min);
-    }
-    
-    if(req_pp_ret){
-      switch(pp_package.PP_rating_enum){
-        case 0:  state["PP"] = "0";
-          break;
-        case 7:  state["PP"] = "13";
-          break;
-        case 8:  state["PP"] = "20";
-          break;
-        case 9:  state["PP"] = "32";
-          break;
-        case 10: state["PP"] = "63";
-          break;
-      }
-    }
-#ifndef TEST_NO_METER
-    for(uint8_t i=0; i<5; i++) {
-      if(DLT645_init()) {
-        delay(3000);
-        read_Meter();
-        state["Voltage"] = String(V);
-        state["MainsFreq"] = String(f);
-        break;
-      }
-    }
-#endif
-    // digitalWrite(RE_D, LOW);
-    relay_io->write1(EXP_RE_330,LOW); 
-    delay(1000);
-    if((cp_package.CP_Freq > 1005.0f)     || (cp_package.CP_Freq < 995.0f ))    {state["PWM_Freq_Result"]        = false;}
-    if((cp_package.CP_Max    < 2.59f)     || (cp_package.CP_Max    > 3.28f))    {state["PWM_Amplitude_Result"]   = false;}
-    if((cp_package.CP_Min < -12.6f)       || (cp_package.CP_Min > -11.0f  ))    {state["PWM_NveAmplitude_Result"]= false;}
-    if(float(state["PWM_Imax"]) > float(state["PP"]))                           {state["PWM_Imax_Result"]        = false;}
-    if(float(state["MainsOnDelay"]) > 3000.0f)                                  {state["MainsOnDelay_Result"]    = false;}
-    if(float(state["Voltage"]) < 210.0f   || float(state["Voltage"]) > 240.0f)  {state["Voltage_Result"]         = false;}
-    if(float(state["MainsFreq"]) < 49.0f  || float(state["MainsFreq"]) > 51.0f) {state["MainsFreq_Result"]       = false;}
-    state_count = 3;
-    serializeJson(state, DEBUG_Bluetooth);
-    DEBUG_Bluetooth.println();
-    DEBUG_Bluetooth.flush();
-    Serial.println("Done test State B to D");
-
-    
-  }
-}
-
-void state_C_to_B (void) {
-  if(req == "State_C_to_B" && state_count == 3) {
-    Serial.println("Begin test State C to B");
-    DynamicJsonDocument state(512);
-    state["State_To_Test"]     = "C_to_B";
-    state["PWM_StartupDelay"]   = "0";
-    state["PWM_Amplitude"]      = "0";
-    state["PWM_NveAmplitude"]   = "0";
-    state["PWM_Freq"]           = "0";
-    state["PWM_DutyCycle"]      = "0";
-    state["PWM_Imax"]           = "0";
-    state["MainsOffDelay"]      = "0";
-    state["MainsFreq"]          = "0";
-    state["PP"]                 = "0";
-
-    state["PWM_StartupDelay_Result"]   = true;
-    state["PWM_Amplitude_Result"]      = true;
-    state["PWM_NveAmplitude_Result"]   = true;
-    state["PWM_Freq_Result"]           = true;
-    state["PWM_DutyCycle_Result"]      = true;
-    state["PWM_Imax_Result"]           = true;
-    state["MainsOffDelay_Result"]      = true;
-    state["MainsFreq_Result"]          = true;
-    state["Voltage_Result"]            = true;
-    state["PP_Result"]                 = true;
-
-    delay(1000);
-#ifndef TEST_NO_LINE
-    if(LineVoltage_OffTime(V1)){
-      state["Voltage_Result"] = false;
-      serializeJson(state, DEBUG_Bluetooth);
-      DEBUG_Bluetooth.println();
-      ESP.restart();
-    }
-#endif
-
-#ifndef TEST_NO_LINE
-    timerStart(timer);
-    timerRestart(timer);
-#endif
-
-    relay_io->write1(EXP_RE_1k3,LOW);
-
-#ifndef TEST_NO_LINE
-    while(1) {
-      uint64_t timerNow = timerRead(timer);
-      if(digitalRead(V1)){
-        delay(2);
-        if(digitalRead(V1)) {
-          state["MainsOffDelay"] = String(timerNow / 40e3); // ms
-          break;
-        }
-      }
-      if(timerNow > (5*40000000)) {
-        state["MainsOffDelay_Result"] = false;
-        serializeJson(state, DEBUG_Bluetooth);
-        DEBUG_Bluetooth.println();
-        timerStop(timer);
-        ESP.restart();
-      }
-    }
-    timerStop(timer);
-#else
-  state["MainsOffDelay"] = "0";
-  state["MainsOffDelay_Result"] = false;
-
-#endif
-    
-    uint8_t retry_req = 0;
-    boolean req_cp_ret;
-    CP_Package cp_package;
-    do{
-        req_cp_ret = req_CP(&cp_package);
-        if(!req_cp_ret) {
-          AVR_Reset_command();
-          vTaskDelay(500);
-        }
-    }while((retry_req++ < 3) && (req_cp_ret == false));
-    if(req_cp_ret){
-      state["PWM_DutyCycle"]    = String(cp_package.CP_Duty);
-      state["PWM_Freq"]         = String(cp_package.CP_Freq);
-      state["PWM_Amplitude"]    = String(cp_package.CP_Max);
-      state["PWM_NveAmplitude"] = String(cp_package.CP_Min);
-      
-    }
-    relay_io->write1(EXP_RE_CP,LOW);
-    delay(1000);
-    if((cp_package.CP_Freq > 1005.0f) || (cp_package.CP_Freq < 995.0f) ) {state["PWM_Freq_Result"]          = false;}
-    if((cp_package.CP_Max  <   8.37f) || (cp_package.CP_Max  >  9.59f) ) {state["PWM_Amplitude_Result"]     = false;}
-    if((cp_package.CP_Min  <  -12.6f) || (cp_package.CP_Min  > -11.0f) ) {state["PWM_NveAmplitude_Result"]  = false;}
-    if(float(state["MainsOffDelay"]) > 100.0f)                           {state["MainsOffDelay_Result"]     = false;}
-    
-    state_count = 0;
-    serializeJson(state, DEBUG_Bluetooth);
-    DEBUG_Bluetooth.println();
-    DEBUG_Bluetooth.flush();
-    Serial.println("Done test State C to B");
-  }
-}
-
 void diode_PE_test (void) {
   if(req == "Diode_Test") {
     uint64_t timerNow;
@@ -441,14 +21,14 @@ void diode_PE_test (void) {
     diode["PE_OpenCircuit_MainsOffDelay"]           = "0";
     diode["Diode_OpenCircuit_MainsOffDelay"]        = "0";
     // digitalWrite(RE_B, HIGH);
-    relay_io->write1(EXP_RE_CP,HIGH); 
+    relay_io->write1(EXP_RE_CP,HIGH); // Goto State A
     delay(500);
     // digitalWrite(RE_C, HIGH); 
-    relay_io->write1(EXP_RE_1k3,HIGH);
+    relay_io->write1(EXP_RE_1k3,HIGH); // Goto State B
     delay(500);
 
 #ifndef TEST_NO_LINE
-    if(LineVoltage_OffTime(V1)){
+    if(LineVoltage_beforeOff_Test(V1)){
       diode["Diode_ShortCircuit_Result"] = false;
       diode["PE_OpenCircuit_Result"]     = false;
       diode["Diode_OpenCircuit_Result"]  = false;
@@ -464,11 +44,11 @@ void diode_PE_test (void) {
     relay_io->write1(EXP_RE_Diode,HIGH);
 
 #ifndef TEST_NO_LINE 
-    while(1) {
+    while(1) { 
       timerNow = timerRead(timer);
-      if(digitalRead(V1)){
+      if(!digitalRead(V1)){
         delay(2);
-        if(digitalRead(V1)) {
+        if(!digitalRead(V1)) {
           diode["Diode_ShortCircuit_MainsOffDelay"] = String(timerNow / 40e3);
           break;
         }
@@ -490,7 +70,6 @@ void diode_PE_test (void) {
 
     // digitalWrite(RE_C, LOW); 
     relay_io->write1(EXP_RE_1k3,LOW);
-    delay(500);
     // digitalWrite(RE_S, LOW); 
     relay_io->write1(EXP_RE_Diode,LOW);
     delay(500);
@@ -499,7 +78,7 @@ void diode_PE_test (void) {
     delay(500);
 #ifndef TEST_NO_LINE 
     timerStop(timer);
-    if(LineVoltage_OffTime(V1)){
+    if(LineVoltage_beforeOff_Test(V1)){
       diode["PE_OpenCircuit_Result"]     = false;
       diode["Diode_OpenCircuit_Result"]  = false;
       serializeJson(diode, DEBUG_Bluetooth);
@@ -517,9 +96,9 @@ void diode_PE_test (void) {
 #ifndef TEST_NO_LINE 
     while(1) {
       timerNow = timerRead(timer);
-      if(digitalRead(V1)){
+      if(!digitalRead(V1)){
         delay(2);
-        if(digitalRead(V1)) {
+        if(!digitalRead(V1)) {
           diode["PE_OpenCircuit_MainsOffDelay"] = String(timerNow / 40e3);
           break;
         }
@@ -545,7 +124,7 @@ void diode_PE_test (void) {
     delay(500);
 #ifndef TEST_NO_LINE 
     timerStop(timer);
-    if(LineVoltage_OffTime(V1)){
+    if(LineVoltage_beforeOff_Test(V1)){
       diode["Diode_OpenCircuit_Result"] = false;
       serializeJson(diode, DEBUG_Bluetooth);
       DEBUG_Bluetooth.println();
@@ -605,7 +184,7 @@ void RCD0_Test (void) {
     // digitalWrite(RE_C, HIGH); 
     relay_io->write1(EXP_RE_1k3,HIGH);
     delay(500);
-    if(LineVoltage_OffTime(V1)){
+    if(LineVoltage_beforeOff_Test(V1)){
       rcd["RCD0_Result"] = false;
       serializeJson(rcd, DEBUG_Bluetooth);
       DEBUG_Bluetooth.println();
@@ -699,7 +278,7 @@ void Insulator_Test (void) {
     insulation["N_PE"]               = "0";
     insulation["Voltage"]            = "0";
     delay(3000);
-     if(LineVoltage_OnTime(V1)){
+     if(LineVoltage_beforeOn_Test(V1)){
       insulation["Insulation_Testing"] = false;
       serializeJson(insulation, DEBUG_Bluetooth);
       DEBUG_Bluetooth.println();
@@ -819,12 +398,201 @@ void state_Manual (void) {
   else if(req == "METER") {
     if(DLT645_init()) {
       delay(3000);
-      read_Meter();
-      DEBUG_Bluetooth.println(V);
-      DEBUG_Bluetooth.println(f);
+      read_Meter(&V,&f);
     }
     else {
-      DEBUG_Bluetooth.println("Meter Fail");
+      
     }
   }
+}
+
+void send_JSON_state(PWM_test_package package){
+  DynamicJsonDocument state(512);
+  switch(package.State_To_Test){
+    case null_state :
+      state["State_To_Test"] = "nullState";
+      break;
+    case State_A_TO_B :
+      state["State_To_Test"] = "A_to_B";
+      break;
+    case State_B_TO_C :
+      state["State_To_Test"] = "B_to_C";
+      break;
+    case State_B_TO_D :
+      state["State_To_Test"] = "B_to_D";
+      break;
+    case State_C_TO_B :
+      state["State_To_Test"] = "C_to_B";
+      break;
+    default:
+      state["State_To_Test"] = "-";
+      break;
+  }
+  
+  state["PWM_StartupDelay"]   = String(package.pwm_start_delay_ms);
+  state["PWM_Amplitude"]      = String(package.pwm_amplitude_v);
+  state["PWM_NveAmplitude"]   = String(package.pwm_nve_amplitude_v);
+  state["PWM_Freq"]           = String(package.pwm_freq_hz);
+  state["PWM_DutyCycle"]      = String(package.duty_ratio);
+  state["PWM_Imax"]           = String(package.pwm_Imax);
+  state["MainsOnDelay"]       = String(package.main_voltage_onDelay_ms);
+  state["MainsOffDelay"]      = String(package.main_voltage_offDelay_ms);
+  state["MainsFreq"]          = String(package.main_freq_hz);
+  state["Voltage"]            = String(package.main_voltage);
+  state["PP"]                 = String(package.pp_Imax);
+
+  state["PWM_StartupDelay_Result"]   = package.pwm_start_delay_result;
+  state["PWM_Amplitude_Result"]      = package.pwm_amplitude_result;
+  state["PWM_NveAmplitude_Result"]   = package.pwm_nve_amplitude_result;
+  state["PWM_Freq_Result"]           = package.pwm_freq_result;
+  state["PWM_DutyCycle_Result"]      = package.pwm_duty_result;
+  state["PWM_Imax_Result"]           = package.pwm_Imax_result;
+  state["MainsOnDelay_Result"]       = package.main_on_delay_result;
+  state["MainsOffDelay_Result"]      = package.main_off_delay_result;
+  state["MainsFreq_Result"]          = package.main_freq_result;
+  state["Voltage_Result"]            = package.main_voltage_result;
+  state["PP_Result"]                 = package.pp_rating_result;
+
+  serializeJson(state, DEBUG_Bluetooth);
+  DEBUG_Bluetooth.println();
+
+#ifdef DEBUG_Bluetooth_Package
+  serializeJson(state,Serial);
+  Serial.println();
+#endif
+
+}
+void send_JSON_Diode(Diode_test_package package){
+  DynamicJsonDocument diode_package(512);
+
+  diode_package["Diode_ShortCircuit_Result"]              = package.Diode_ShortCircuit_Result;
+  diode_package["PE_OpenCircuit_Result"]                  = package.PE_OpenCircuit_Result;
+  diode_package["Diode_OpenCircuit_Result"]               = package.Diode_OpenCircuit_Result;
+  diode_package["Diode_ShortCircuit_MainsOffDelay"]       = String(package.Diode_ShortCircuit_MainsOffDelay);
+  diode_package["PE_OpenCircuit_MainsOffDelay"]           = String(package.PE_OpenCircuit_MainsOffDelay);
+  diode_package["Diode_OpenCircuit_MainsOffDelay"]        = String(package.Diode_OpenCircuit_MainsOffDelay);
+
+  serializeJson(diode_package, DEBUG_Bluetooth);
+  DEBUG_Bluetooth.println();
+#ifdef DEBUG_Bluetooth_Package
+  serializeJson(diode_package,Serial);
+  Serial.println();
+#endif
+}
+void clear_Diode_Test_Package(Diode_test_package * package){
+  package->Diode_OpenCircuit_MainsOffDelay = 0.0f;
+  package->Diode_ShortCircuit_MainsOffDelay = 0.0f;
+  package->Diode_OpenCircuit_MainsOffDelay = 0.0f;
+
+  package->Diode_OpenCircuit_Result = false;
+  package->Diode_ShortCircuit_Result = false;
+  package->PE_OpenCircuit_Result = false;
+}
+
+void Test_main_on_Delay( uint8_t line, void (*onStart)(), void (*onPass)(float delay), void (*onTimeout)(),uint32_t timeout_ms){
+#ifndef TEST_NO_LINE
+  timerStart(timer);
+  timerRestart(timer);
+  onStart();
+
+  uint64_t timerNow = timerRead(timer);
+  while(timerNow <= (timeout_ms*40000)) {
+    timerNow = timerRead(timer);
+    if(digitalRead(line)){ // If line avaliable -> Pass
+      onPass(timerNow / 40e3);
+      break;
+    } else if(timerNow > (timeout_ms*40000)) {
+      onTimeout();
+    }
+  }
+  timerStop(timer);
+#else
+  onStart();
+  onPass(0.0f);
+#endif
+}
+void Test_main_off_Delay(uint8_t line, void (*onStart)(), void (*onPass)(float delay), void (*onTimeout)(),uint32_t timeout_ms){
+#ifndef TEST_NO_LINE
+  timerStart(timer);
+  timerRestart(timer);
+
+  onStart();
+  uint64_t timerNow = timerRead(timer);
+  while(timerNow <= (timeout_ms*40000)) {
+    timerNow = timerRead(timer);
+    if(!digitalRead(line)){
+      vTaskDelay(2);
+      if(!digitalRead(line)) {
+        onPass(timerNow / 40e3);
+        break;
+      }
+    } else if(timerNow > (timeout_ms*40000)) {
+      onTimeout();
+    }
+  }
+  timerStop(timer);
+#else
+  onStart();
+  onPass(0.0f);
+#endif
+  
+}
+void clear_PWM_Test_Package(PWM_test_package * package){
+  package->State_To_Test = null_state;
+    
+  package->pwm_start_delay_ms = 0.0f;
+  package->pwm_amplitude_v = 0.0f;
+  package->pwm_nve_amplitude_v = 0.0f;
+  package->pwm_freq_hz = 0.0f;
+  package->duty_ratio = 0.0f;
+  package->pwm_Imax = 0.0f;
+  package->pp_Imax = 0.0f;
+  package->main_voltage_onDelay_ms = 0.0f;
+  package->main_voltage_offDelay_ms = 0.0f;
+  package->main_freq_hz = 0.0f;
+  package->main_voltage = 0.0f;
+
+  package->pwm_start_delay_result = false;
+  package->pwm_amplitude_result = false;
+  package->pwm_nve_amplitude_result = false;
+  package->pwm_freq_result = false;
+  package->pwm_duty_result = false;
+  package->pwm_Imax_result = false;
+  package->pp_rating_result = false;
+  package->main_on_delay_result = false;
+  package->main_off_delay_result = false;
+  package->main_freq_result = false;
+  package->main_voltage_result = false;
+}
+void clear_RCD_Test_Package(RCD_Test_package * package){
+  package->LimitTrip_time = 0.0f;
+  package->TestingCurrent = 0.0f;
+  package->TripTime_ms = 0.0f;
+  package->RCD0_Result = false;
+  package->RCD1_Result = false;
+  package->RCD2_Result = false;
+}
+void send_JSON_RCD(RCD_Test_package package){
+  DynamicJsonDocument rcd(256);
+  rcd["RCD0_Result"] = package.RCD0_Result;
+  rcd["Trip_Time"]   = String(package.TripTime_ms);
+  rcd["Limit"]       = String(package.LimitTrip_time);
+  rcd["Current"]     = String(package.TestingCurrent);
+
+  serializeJson(rcd, DEBUG_Bluetooth);
+  DEBUG_Bluetooth.println();
+#ifdef DEBUG_Bluetooth_Package
+  serializeJson(rcd,Serial);
+  Serial.println();
+#endif
+}
+void waitLineOn(uint8_t line, uint32_t timeout_ms){
+  timerStart(timer);
+  timerRestart(timer);
+  while (timerRead(timer) < (timeout_ms * 40000)) {
+    if(digitalRead(line)){
+      break;
+    }
+  }
+  timerStop(timer);
 }
