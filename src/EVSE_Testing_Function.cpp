@@ -535,8 +535,8 @@ void Test_main_off_Delay(uint8_t line, void (*onStart)(), void (*onPass)(float d
   onStart();
   onPass(0.0f);
 #endif
-  
 }
+
 void clear_PWM_Test_Package(PWM_test_package * package){
   package->State_To_Test = null_state;
     
@@ -574,11 +574,18 @@ void clear_RCD_Test_Package(RCD_Test_package * package){
 }
 void send_JSON_RCD(RCD_Test_package package){
   DynamicJsonDocument rcd(256);
-  rcd["RCD0_Result"] = package.RCD0_Result;
-  rcd["Trip_Time"]   = String(package.TripTime_ms);
-  rcd["Limit"]       = String(package.LimitTrip_time);
-  rcd["Current"]     = String(package.TestingCurrent);
-
+  if(!package.noTrip){
+    rcd["RCD0_Result"] = package.RCD0_Result;
+    rcd["Trip_Time"]   = String(package.TripTime_ms);
+    rcd["Limit"]       = String(package.LimitTrip_time);
+    rcd["Current"]     = String(package.TestingCurrent);
+  } else { // RCD not trip
+    rcd["RCD0_Result"] = false;
+    rcd["Trip_Time"]   = "> 250ms";
+    rcd["Limit"]       = String(package.LimitTrip_time);
+    rcd["Current"]     = String(package.TestingCurrent);
+  }
+  
   serializeJson(rcd, DEBUG_Bluetooth);
   DEBUG_Bluetooth.println();
 #ifdef DEBUG_Bluetooth_Package

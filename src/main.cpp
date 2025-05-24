@@ -35,7 +35,8 @@ String avr_msg = "";
 
 hw_timer_t * timer;
 EVSE_Test_FSM evse_fsm = EVSE_Test_Standby;
-
+boolean EVSE_PWM_TestSingleState = false;
+boolean isManualMode = false;
 #define in_Between(x,Mn,Mx) ((x > Mn) && (x < Mx))
 
 void AVR_HandleTask(void* param);
@@ -102,12 +103,16 @@ void loop() {
       case EVSE_Test_Standby :
         if(msg == "State_A_to_B"){
           evse_fsm = State_Test_A_to_B_Begin;
+          EVSE_PWM_TestSingleState = false;
         }else if(msg == "State_B_to_C"){
           evse_fsm = State_Test_B_to_C_Begin;
+          EVSE_PWM_TestSingleState = false;
         }else if(msg == "State_B_to_D"){
           evse_fsm = State_Test_B_to_D_Begin;
+          EVSE_PWM_TestSingleState = false;
         }else if(msg == "State_C_to_B"){
           evse_fsm = State_Test_C_to_B_Begin;
+          EVSE_PWM_TestSingleState = false;
         }else if(msg == "Diode_Test"){
           evse_fsm = Diode_Short_Test_Begin;
         }else if(msg == "PE_Open_Test"){
@@ -118,6 +123,32 @@ void loop() {
           evse_fsm = RCD_Test_Begin;
         }else if(msg == "Insulator_Test"){
 
+        }else if(msg == "State_A_to_B_Single"){
+          evse_fsm = State_Test_A_to_B_Begin;
+          EVSE_PWM_TestSingleState = true;
+        }else if(msg == "State_B_to_C_Single"){
+          evse_fsm = State_Test_B_to_C_Begin;
+          EVSE_PWM_TestSingleState = true;
+        }else if(msg == "State_B_to_D_Single"){
+          evse_fsm = State_Test_B_to_D_Begin;
+          EVSE_PWM_TestSingleState = true;
+        }else if(msg == "State_C_to_B_Single"){
+          evse_fsm = State_Test_C_to_B_Begin;
+          EVSE_PWM_TestSingleState = true;
+        }else if(msg == "WhatAreYou"){
+          evse_fsm = returnWhatAreYou;
+        }else if(msg == "Force_A"){
+          evse_fsm = setManual_A;
+        }else if(msg == "Force_B"){
+          evse_fsm = setManual_B;
+        }else if(msg == "Force_C"){
+          evse_fsm = setManual_C;
+        }else if(msg == "Force_D"){
+          evse_fsm = setManual_D;
+        }else if(msg == "gotoManual"){
+          evse_fsm = setModeManual;
+        }else if(msg == "gotoAuto"){
+          evse_fsm = setModeAuto;
         }
         break;
       case State_Test_A_to_B_Begin :
@@ -256,7 +287,8 @@ void loop() {
       pwm_test_pck.State_To_Test = State_A_TO_B;
       send_JSON_state(pwm_test_pck);
       clear_PWM_Test_Package(&pwm_test_pck);
-      evse_fsm = State_Test_A_to_B_WaitNextCommand;
+      if(EVSE_PWM_TestSingleState) evse_fsm = EVSE_Test_Standby;
+      else evse_fsm = State_Test_A_to_B_WaitNextCommand;
       break;
     case State_Test_A_to_B_WaitNextCommand :
       break;
@@ -380,7 +412,8 @@ void loop() {
       pwm_test_pck.State_To_Test = State_B_TO_C;
       send_JSON_state(pwm_test_pck);
       clear_PWM_Test_Package(&pwm_test_pck);
-      evse_fsm = State_Test_B_to_C_WaitNextCommand;
+      if(EVSE_PWM_TestSingleState) evse_fsm = EVSE_Test_Standby;
+      else evse_fsm = State_Test_B_to_C_WaitNextCommand;
       break;
     case State_Test_B_to_C_WaitNextCommand :
       break;
@@ -485,7 +518,8 @@ void loop() {
       pwm_test_pck.State_To_Test = State_B_TO_D;
       send_JSON_state(pwm_test_pck);
       clear_PWM_Test_Package(&pwm_test_pck);
-      evse_fsm = State_Test_B_to_D_WaitNextCommand;
+      if(EVSE_PWM_TestSingleState) evse_fsm = EVSE_Test_Standby;
+      else evse_fsm = State_Test_B_to_D_WaitNextCommand;
       break;
     case State_Test_B_to_D_WaitNextCommand :
       break;
@@ -677,7 +711,6 @@ void loop() {
       vTaskDelay(100);
       relay_io->write1(EXP_RE_1k3,HIGH);
       waitLineOn(V1);
-
       if(LineVoltage_beforeOff_Test(V1)){
         evse_fsm = RCD_Test_TripTime;
       }else{
@@ -688,6 +721,7 @@ void loop() {
       Test_main_off_Delay(V1,
         [](){
           relay_io->write1(EXP_RE_LeakL1,HIGH);
+          // relay_io->write1(EXP_RE_PE,HIGH);
         },
         [](float TripTime){
           relay_io->write8(0x00);
@@ -696,12 +730,13 @@ void loop() {
         },
         [](){
           evse_fsm = RCD_SendJSON;
+          rcd_test_pck.noTrip = true;
         },
-        300
+        250U
       );
       break;
     case RCD_Process_Result :
-      rcd_test_pck.LimitTrip_time = 100.0f;
+      rcd_test_pck.LimitTrip_time = 150.0f;
       rcd_test_pck.TestingCurrent = 30.0f;
       rcd_test_pck.RCD0_Result = rcd_test_pck.TripTime_ms < rcd_test_pck.LimitTrip_time;
       evse_fsm = RCD_SendJSON;
@@ -710,6 +745,56 @@ void loop() {
       send_JSON_RCD(rcd_test_pck);
       clear_RCD_Test_Package(&rcd_test_pck);
       relay_io->write8(0x00);
+      evse_fsm = EVSE_Test_Standby;
+      break;
+
+    case returnWhatAreYou :
+        vTaskDelay(100);
+      if(isManualMode){
+        DEBUG_Bluetooth.println("ManualMode");
+        Serial.println("I am Manual");
+      }else{
+        DEBUG_Bluetooth.println("AutoMode");
+        Serial.println("I am Auto");
+      }
+      evse_fsm = EVSE_Test_Standby;
+      break;
+    case setManual_A :
+      relay_io->write8(0x00);
+      evse_fsm = EVSE_Test_Standby;
+      Serial.println("State A");
+      break;
+    case setManual_B :
+      // relay_io->write1(EXP_RE_CP,HIGH);
+      relay_io->write8(0b00000001);
+      evse_fsm = EVSE_Test_Standby;
+      Serial.println("State B");
+      break;
+    case setManual_C :
+      relay_io->write1(EXP_RE_1k3,HIGH);
+      relay_io->write8(0b00000101);
+      evse_fsm = EVSE_Test_Standby;
+      Serial.println("State C");
+      break;
+    case setManual_D :
+      // relay_io->write1(EXP_RE_330,HIGH);
+      relay_io->write8(0b000010101);
+      evse_fsm = EVSE_Test_Standby;
+      Serial.println("State D");
+      break;
+    case setModeManual :
+      relay_io->write8(0x00); // Clear Relay State
+      isManualMode = true;
+      Serial.println("Now Manual");
+      evse_fsm = EVSE_Test_Standby;
+      break;
+    case setModeAuto :
+      relay_io->write8(0x00); // Clear Relay State
+      isManualMode = false;
+      Serial.println("Now Auto");
+      evse_fsm = EVSE_Test_Standby;
+      break;
+    case returnWhatYourStatus:
       evse_fsm = EVSE_Test_Standby;
       break;
     default:

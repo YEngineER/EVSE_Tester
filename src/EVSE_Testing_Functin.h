@@ -43,7 +43,16 @@ typedef enum{
     RCD_Test_Begin,
     RCD_Test_TripTime,
     RCD_Process_Result,
-    RCD_SendJSON
+    RCD_SendJSON,
+
+    returnWhatAreYou,
+    setManual_A,
+    setManual_B,
+    setManual_C,
+    setManual_D,
+    setModeManual,
+    setModeAuto,
+    returnWhatYourStatus
     
 }EVSE_Test_FSM;
 
@@ -100,6 +109,8 @@ typedef struct{
     boolean RCD0_Result;
     boolean RCD1_Result;
     boolean RCD2_Result;
+
+    boolean noTrip;
 }RCD_Test_package;
 
 void send_JSON_state(PWM_test_package package);
@@ -118,6 +129,7 @@ void Test_main_off_Delay(
     void (*onTimeout)(),
     uint32_t timeout_ms = 5000
 );
+
 
 void send_JSON_Diode(Diode_test_package package);
 void clear_Diode_Test_Package(Diode_test_package * package);

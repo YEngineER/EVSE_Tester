@@ -18,5 +18,7 @@ extern String avr_msg;
 
 // extern uint64_t nowTime;
 extern EVSE_Test_FSM evse_fsm;
+extern boolean EVSE_PWM_TestSingleState;
+extern boolean isManualMode;
 
 #endif
